@@ -19,20 +19,20 @@
                         <div class="row">
                             <div class="col info">审批流名称:</div>
                             <div class="col">
-                                <el-input placeholder="请输入" style="width: 360px">
+                                <el-input placeholder="请输入" v-model="approvalName" style="width: 360px">
                                 </el-input>
                             </div>
                         </div>
-                        <div class="row" v-for="(item, index) in nodeList" :key="index" @click="toShowRightTable(index)">
+                        <div class="row" v-for="(item, index) in nodeList" :key="index" @click="clickNodeInput(index)">
                             <div class="col info">
                                 <el-input v-model="item.nodeName" style="width: 100px;margin-right: 5px"></el-input>审批人:
                             </div>
                             <div class="col">
                                 <div class="select">
-                                    <div class="input">
+                                    <div class="input" :class="item.isCurrentNode ? 'selectBorder' : ''">
                                         <div class="valueBox" v-for="(jItem,jIndex) in item.selectPerson" :key="jIndex">
                                             <div class="value">{{ jItem.personName + '(' + jItem.dept + ')' }}</div>
-                                            <div class="icon" @click="deleteSelectPerson(index,jIndex)">
+                                            <div class="icon" @click.stop="deleteSelectPerson(index,jIndex)">
                                                 <i class="el-icon-error"></i>
                                             </div>
                                         </div>
@@ -133,7 +133,8 @@ export default{
             tableTableHeight: 400,
             relatePersonList: [],
             ShowRightTable: false,
-            selectNodeIndex: 0
+            selectNodeIndex: 0,
+            approvalName: ""
         }
     },
     mounted(){
@@ -150,6 +151,7 @@ export default{
                 nodeName: "",
                 selectPerson: [],
                 type: 3,
+                isCurrentNode: false
             }
             this.nodeList.push(nodeObj)
         },
@@ -187,7 +189,7 @@ export default{
             this.nodeList[index].selectPerson.splice(jIndex, 1);
 
         },
-        addValue(obj, value) {
+        addValue(obj, value, type) {
             // 如果 obj 是数组，则遍历数组中的每个元素
             if (Array.isArray(obj)) {
                 for (var i = 0; i < obj.length; i++) {
@@ -197,8 +199,10 @@ export default{
                     }
                     // 如果元素等于 value，则在数组中添加新值
                     if (obj[i].type === value) {
-                        if(obj[i].select){
-                            obj[i].select = false;
+                        if(type == "clearAll"){
+                            if(obj[i].select){
+                                obj[i].select = false;
+                            }
                         }
                     }
                 }
@@ -220,11 +224,20 @@ export default{
             return obj;
         },
         //显示右边表格进行选择
-        toShowRightTable(index){
+        clickNodeInput(valIndex){
             //将已选择的清空
-            this.relatePersonList = this.addValue(this.relatePersonList, "children");
+            this.relatePersonList = this.addValue(this.relatePersonList, "children", "clearAll");
             this.ShowRightTable = true;
-            this.selectNodeIndex = index;
+            this.selectNodeIndex = valIndex;
+
+            this.nodeList = this.nodeList.map((item,index) => {
+                if(valIndex == index){
+                    item.isCurrentNode = true;
+                }else{
+                    item.isCurrentNode = false;
+                }
+                return item;
+            })
         },
         getAdminAuthCasList(){
             adminAuthCascaderApi({keyword: this.keyword}).then(res => {
@@ -274,6 +287,7 @@ export default{
                                 align-items: center;
                                 flex-wrap: wrap;
                                 border: 1px solid #DCDFE6;
+                                
                                 .valueBox{
                                     width: fit-content;
                                     height: 25px;
@@ -298,6 +312,9 @@ export default{
                                         }
                                     }
                                 }
+                            }
+                            .selectBorder{
+                                border: 1px solid #409EFF;
                             }
                             .tip{
                                 display: flex;
