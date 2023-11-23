@@ -25,7 +25,8 @@
                         <div class="col info">{{ item.nodeName }}:</div>
                         <div class="col">
                             <div class="select">
-                                <el-cascader
+                                <el-input style="width: 360px"></el-input>
+                                <!-- <el-cascader
                                     v-model="item.selectNodes" 
                                     :options="options"
                                     :props="props"
@@ -34,14 +35,14 @@
                                     multiple
                                     style="width: 360px"
                                     @change="toSelectNode">
-                                </el-cascader>
+                                </el-cascader> -->
                             </div>
                             <div class="tip">
                                 <div class="tip_info">节点设置:</div>
                                 <div class="value">
                                     <el-radio-group v-model="item.type">
-                                        <el-radio :label="6">任意人员同意即可</el-radio>
-                                        <el-radio :label="3">必须人员全部同意</el-radio>
+                                        <el-radio :label="3">任意人员同意即可</el-radio>
+                                        <el-radio :label="4">必须人员全部同意</el-radio>
                                     </el-radio-group>
                                 </div>
                             </div>
@@ -110,6 +111,7 @@
 </template>
 <script>
 import { numberToWords } from 'pixiu-number-toolkit';
+import { adminAuthCascaderApi } from "@/request/api"
 export default{
     data(){
         return {
@@ -208,6 +210,9 @@ export default{
             }],
         }
     },
+    mounted(){
+        this.getAdminAuthCasList();
+    },
     methods:{
         openDialog(){
             this.dialogVisble = true;
@@ -248,6 +253,12 @@ export default{
         },
         toSelectTableNode(val){
             console.log(val);
+        },
+        
+        getAdminAuthCasList(){
+            adminAuthCascaderApi().then(res => {
+                console.log(res);
+            })
         }
     }
 }

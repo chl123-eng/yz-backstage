@@ -11,7 +11,7 @@ const instance = axios.create({
 // 请求拦截器
 instance.interceptors.request.use(
     (config) => {
-        let token = localStorage.getItem("token");
+        let token = localStorage.getItem("token") || "f92437603e0d4138accdff1fea1fac0e";
         if (token) {
             config.headers["token"] = token;
         }
