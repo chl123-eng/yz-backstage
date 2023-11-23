@@ -189,7 +189,7 @@ export default{
             this.nodeList[index].selectPerson.splice(jIndex, 1);
 
         },
-        addValue(obj, value, type) {
+        addValue(obj, value, type,itemVal) {
             // 如果 obj 是数组，则遍历数组中的每个元素
             if (Array.isArray(obj)) {
                 for (var i = 0; i < obj.length; i++) {
