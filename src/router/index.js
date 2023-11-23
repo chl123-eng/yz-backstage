@@ -16,6 +16,12 @@ const routes = [
             meta: { title: "审批流", isShow: true },
             component: () => import("@/views/approvalProcess/approvalProcess.vue"),
         },
+        {
+          path: "/menu/purchasePlan",
+          name: "purchasePlan",
+          meta: { title: "采购计划表", isShow: true },
+          component: () => import("@/views/purchasePlan/purchasePlan.vue"),
+      },
       ]
   }
 ];

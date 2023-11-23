@@ -42,6 +42,12 @@ export default {
             url: "/menu/approvalProcess",
             is_show: 1,
           },
+          {
+            modular: "purchasePlan",
+            name: "采购计划表",
+            url: "/menu/purchasePlan",
+            is_show: 1,
+          },
       ],
     }
   },
