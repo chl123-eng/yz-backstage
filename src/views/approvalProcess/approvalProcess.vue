@@ -4,6 +4,7 @@
         <div class="table">
             <el-table :data="dataList" border :header-cell-style="{ 
             background:'#409EFF', color: '#fff'}">
+                <el-table-column label="审批信息" align="center" prop="name"></el-table-column>
                 <el-table-column label="审批时间" align="center" prop="name"></el-table-column>
                 <el-table-column label="审批人员" align="center" prop="age"></el-table-column>
                 <el-table-column label="更新时间" align="center"></el-table-column>
@@ -25,14 +26,14 @@
                         </div>
                         <div class="row" v-for="(item, index) in nodeList" :key="index" @click="clickNodeInput(index)">
                             <div class="col info">
-                                <el-input v-model="item.nodeName" style="width: 100px;margin-right: 5px"></el-input>审批人:
+                                <el-input v-model="item.event_name" style="width: 100px;margin-right: 5px"></el-input>审批人:
                             </div>
                             <div class="col">
                                 <div class="select">
                                     <div class="input" :class="item.isCurrentNode ? 'selectBorder' : ''">
                                         <div class="valueBox" v-for="(jItem,jIndex) in item.selectPerson" :key="jIndex">
                                             <div class="value">{{ jItem.personName + '(' + jItem.dept + ')' }}</div>
-                                            <div class="icon" @click.stop="deleteSelectPerson(index,jIndex)">
+                                            <div class="icon" @click.stop="deleteSelectPerson(jItem,index,jIndex)">
                                                 <i class="el-icon-error"></i>
                                             </div>
                                         </div>
@@ -41,9 +42,9 @@
                                 <div class="tip">
                                     <div class="tip_info">节点设置:</div>
                                     <div class="value">
-                                        <el-radio-group v-model="item.type">
-                                            <el-radio :label="3">任意人员同意即可</el-radio>
-                                            <el-radio :label="4">必须人员全部同意</el-radio>
+                                        <el-radio-group v-model="item.node_set">
+                                            <el-radio :label="1">任意人员同意即可</el-radio>
+                                            <el-radio :label="2">必须人员全部同意</el-radio>
                                         </el-radio-group>
                                     </div>
                                 </div>
@@ -58,7 +59,8 @@
                     <div class="right" v-if="ShowRightTable">
                         <div class="right_content">
                             <div class="search">
-                                <el-input placeholder="模糊搜索" v-model="keyword"></el-input>
+                                <el-input placeholder="模糊搜索" v-model="keyword" style="width: 430px;margin-right: 20px"></el-input>
+                                <div @click="getAdminAuthCasList" class="searchBtn">搜索</div>
                             </div>
                             <div class="right_table">
                                 <el-table
@@ -89,7 +91,7 @@
                                     align="center">
                                         <template slot-scope="scope">
                                             <div v-if="scope.row.type == 'children'"  class="temp_row">
-                                                <el-checkbox v-model="scope.row.select" @change="toSelectTableNode(scope.row)"></el-checkbox>
+                                                <el-checkbox v-model="scope.row.select" :disabled="scope.row.select" @change="toSelectTableNode(scope.row)"></el-checkbox>
                                                 <div>{{ scope.row.personName }}</div>
                                             </div>
                                         </template>
@@ -107,25 +109,18 @@
                 </div>
                 <div slot="footer" class="footer">
                     <el-button @click="cancel">取 消</el-button>
-                    <el-button type="primary" @click="cancel">确 定</el-button>
+                    <el-button type="primary" @click="createFlow">确 定</el-button>
                 </div>
             </div>
         </el-dialog>
     </div>
 </template>
 <script>
-import { adminAuthCascaderApi } from "@/request/api"
+import { adminAuthCascaderApi, createFlowApi } from "@/request/api"
 export default{
     data(){
         return {
-            dataList: [{
-                name: "张三",
-                age: 18
-            },
-            {
-                name: "张三",
-                age: 18
-            }],
+            dataList: [],
             nodeList: [
             ],
             dialogVisble: false,
@@ -137,6 +132,17 @@ export default{
             approvalName: ""
         }
     },
+    // watch: {
+    //     nodeList: {
+    //         handler(newVal){
+    //             //讲内容回显到右上搜索框
+    //             this.keyword = newVal[this.selectNodeIndex].selectPerson.map((item) => {
+    //                 return `${item.personName}(${item.dept})`
+    //             }).join("、")
+    //         },
+    //         deep: true
+    //     }
+    // },
     mounted(){
         this.getAdminAuthCasList();
     },
@@ -148,20 +154,26 @@ export default{
         addNode(){
             let nodeObj = {
                 id: this.nodeList.length,
-                nodeName: "",
+                event_name: "",
                 selectPerson: [],
-                type: 3,
+                node_set: 1,
                 isCurrentNode: false
             }
             this.nodeList.push(nodeObj)
         },
         //删除节点
         deleteNode(item, index){
-            this.$confirm(`确定删除${item.nodeName}及以下节点审批人信息吗?`, '提示', {
+            this.$confirm(`确定删除${item.event_name}及以下节点审批人信息吗?`, '提示', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
+                let deleteArr = this.nodeList.splice(index, this.nodeList.length - index);
+                deleteArr.forEach(Ditem => {
+                    Ditem.selectPerson.forEach(Sitem => {
+                        this.addValue(this.relatePersonList, "children", "single", Sitem);
+                    })
+                })
                 this.nodeList = this.nodeList.slice(0, index);
                 this.$message({
                     type: 'success',
@@ -185,22 +197,28 @@ export default{
             }
         },
         //删除已选审批人
-        deleteSelectPerson(index,jIndex){
+        deleteSelectPerson(jItem,index,jIndex){
             this.nodeList[index].selectPerson.splice(jIndex, 1);
-
+            this.addValue(this.relatePersonList, "children", "single", jItem);
         },
-        addValue(obj, value, type,itemVal) {
+        //操作数据树
+        addValue(obj, value, type, itemVal) {
             // 如果 obj 是数组，则遍历数组中的每个元素
             if (Array.isArray(obj)) {
                 for (var i = 0; i < obj.length; i++) {
                     // 如果元素是数组或对象，则递归调用 addValue 函数
                     if (typeof obj[i] === 'object') {
-                        this.addValue(obj[i].children, value);
+                        this.addValue(obj[i].children, value,type,itemVal);
                     }
                     // 如果元素等于 value，则在数组中添加新值
                     if (obj[i].type === value) {
                         if(type == "clearAll"){
                             if(obj[i].select){
+                                // obj[i].select = false;
+                            }
+                        }
+                        if(type == "single"){
+                            if(obj[i].select && itemVal.id == obj[i].id){
                                 obj[i].select = false;
                             }
                         }
@@ -239,11 +257,34 @@ export default{
                 return item;
             })
         },
+        //获取右边表格信息
         getAdminAuthCasList(){
             adminAuthCascaderApi({keyword: this.keyword}).then(res => {
                 this.relatePersonList = res.data;
             })
         },
+        //创建审批流
+        createFlow(){
+            let dataParam = [];
+            this.nodeList.forEach(item => {
+                let obj = {
+                    event_name: item.event_name,
+                    node_set: item.node_set,
+                    ids: ""
+                }
+                obj.ids = item.selectPerson.map(i => {
+                    return i.id
+                }).join(",");
+                dataParam.push(obj);
+            })
+            let params = {
+                flow_name: this.approvalName,
+                data: JSON.stringify(dataParam)
+            }
+            createFlowApi(params).then(res => {
+                console.log(res);
+            })
+        }
 
     }
 }
@@ -372,6 +413,18 @@ export default{
                     }
                     .search{
                         margin-bottom: 10px;
+                        display: flex;
+                        align-items: center;
+                        .searchBtn{
+                            height: 30px;
+                            width: 50px;
+                            text-align: center;
+                            line-height: 30px;
+                            font-size: 12px;
+                            background: #409EFF;
+                            color: #fff;
+                            border-radius: 30px;
+                        }
                     }
                     &_table{
                         height: 500px;

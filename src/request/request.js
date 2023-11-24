@@ -11,11 +11,11 @@ const instance = axios.create({
 // 请求拦截器
 instance.interceptors.request.use(
     (config) => {
-        let token = localStorage.getItem("token") || "f92437603e0d4138accdff1fea1fac0e";
+        let token = "93382208-30b0-4293-9197-6c53a0b4b17a";
         if (token) {
             config.headers["token"] = token;
         }
-        config.headers['yzfrom'] = 'web-suppliers';
+        // config.headers['yzfrom'] = 'web-suppliers';
         return config; // 一定要返回config,不然在组件中会报错
     },
     (err) => {
