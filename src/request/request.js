@@ -18,31 +18,31 @@ instance.interceptors.request.use(
         // config.headers['yzfrom'] = 'web-suppliers';
         return config; // 一定要返回config,不然在组件中会报错
     },
-    (err) => {
-        return Promise.reject(err);
+    () => {
+        // return Promise.reject(err);
     }
 );
 // 响应拦截器
 instance.interceptors.response.use(
     (res) => {
         let data = res.data;
-        if (data.status != 200) {
+        if (data.code != 200) {
             Message.error(data.msg || "网络请求错误");
         }
-        if (data.status == 401) {
+        if (data.code == 401) {
             Router.push('/login')
         }
         return data; // 这个返回的组件中then方法中的数据
     },
     (err) => {
         let data = err.response.data;
-        if (data.status != 200) {
-            Message.error(data.msg || "网络请求错误");
+        if (data.code != 200) {
+            // Message.error(data.msg || "网络请求错误");
         }
-        if (data.status == 401) {
+        if (data.code == 401) {
             Router.push('/login')
         }
-        return Promise.reject(err);
+        // return Promise.reject(err);
     }
 );
 export default instance;

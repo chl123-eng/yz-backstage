@@ -12,6 +12,15 @@
                 <el-table-column label="操作" align="center"></el-table-column>
             </el-table>
         </div>
+        <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            :current-page="pageParam.page"
+            :page-sizes="[10, 20, 30, 40]"
+            :page-size="pageParam.pageSize"
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total">
+        </el-pagination>
 
         <el-dialog :visible.sync="dialogVisble" title="创建审批流" width="1250px" :close-on-click-modal="false" class="dialog">
             <div class="content">
@@ -116,7 +125,7 @@
     </div>
 </template>
 <script>
-import { adminAuthCascaderApi, createFlowApi } from "@/request/api"
+import { adminAuthCascaderApi, createFlowApi, flowListApi } from "@/request/api"
 export default{
     data(){
         return {
@@ -129,7 +138,12 @@ export default{
             relatePersonList: [],
             ShowRightTable: false,
             selectNodeIndex: 0,
-            approvalName: ""
+            approvalName: "",
+            total: 0,
+            pageParam: {
+                page: 1,
+                pageSize: 20
+            }
         }
     },
     // watch: {
@@ -144,12 +158,32 @@ export default{
     //     }
     // },
     mounted(){
+        this.getDataList();
         this.getAdminAuthCasList();
     },
     methods:{
         openDialog(){
             this.dialogVisble = true;
         },
+        //获取列表
+        getDataList(){
+            flowListApi(this.pageParam).then(res => {
+                if(res.code == 200){
+                    this.dataList = res.data.flow_data;
+                    this.total = res.data.total;
+                }
+            })
+        },
+        handleSizeChange(val){
+            this.pageParam.page = 1;
+            this.pageParam.pageSize = val;
+            this.getDataList();
+        },
+        handleCurrentChange(val){
+            this.pageParam.page = val;
+            this.getDataList();
+        },
+        
         //增加节点
         addNode(){
             let nodeObj = {
@@ -282,7 +316,9 @@ export default{
                 data: JSON.stringify(dataParam)
             }
             createFlowApi(params).then(res => {
-                console.log(res);
+                if(res.code == 200 ){
+                    this.$message.success("创建成功")
+                }
             })
         }
 
