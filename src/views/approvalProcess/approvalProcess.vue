@@ -1,48 +1,56 @@
 <template>
     <div class="approvalProcess">
-        <el-button type="primary" @click="openDialog">创建审批流</el-button>
+        <el-button type="primary" @click="toCreateFlow">创建审批流</el-button>
         <div class="table">
             <el-table :data="dataList" border :header-cell-style="{ 
             background:'#409EFF', color: '#fff'}">
-                <el-table-column label="审批信息" align="center" prop="name"></el-table-column>
-                <el-table-column label="审批时间" align="center" prop="name"></el-table-column>
-                <el-table-column label="审批人员" align="center" prop="age"></el-table-column>
-                <el-table-column label="更新时间" align="center"></el-table-column>
-                <el-table-column label="创建人" align="center"></el-table-column>
-                <el-table-column label="操作" align="center"></el-table-column>
+                <el-table-column label="审批信息" align="center" prop="title"></el-table-column>
+                <el-table-column label="审批人员" align="center">
+                    <template slot-scope="scope">
+                        <span>{{ scope.row.flow_num }}名</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="更新时间" align="center" prop="updatetime"></el-table-column>
+                <el-table-column label="创建人" align="center" prop="creatter"></el-table-column>
+                <el-table-column label="操作" align="center">
+                    <template slot-scope="scope">
+                        <el-button type="primary" @click="toCheck(scope.row)" size="small">查看</el-button>
+                        <el-button type="primary" @click="toEdit(scope.row)" size="small">编辑</el-button>
+                    </template>
+                </el-table-column>
             </el-table>
         </div>
         <el-pagination
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
             :current-page="pageParam.page"
-            :page-sizes="[10, 20, 30, 40]"
-            :page-size="pageParam.pageSize"
+            :page-sizes="[1, 2, 3, 4]"
+            :page-size="pageParam.pagesize"
             layout="total, sizes, prev, pager, next, jumper"
             :total="total">
         </el-pagination>
 
-        <el-dialog :visible.sync="dialogVisble" title="创建审批流" width="1250px" :close-on-click-modal="false" class="dialog">
+        <el-dialog :visible.sync="dialogVisble" :title="dialogTitle" :width="operateType == 'check' ? '800px':'1250px'" @close="cancel" :close-on-click-modal="false" class="dialog">
             <div class="content">
                 <div class="top">
                     <div class="left">
                         <div class="row">
                             <div class="col info">审批流名称:</div>
                             <div class="col">
-                                <el-input placeholder="请输入" v-model="approvalName" style="width: 360px">
+                                <el-input placeholder="请输入" v-model="approvalName" style="width: 360px" :disabled="operateType == 'check'">
                                 </el-input>
                             </div>
                         </div>
                         <div class="row" v-for="(item, index) in nodeList" :key="index" @click="clickNodeInput(index)">
                             <div class="col info">
-                                <el-input v-model="item.event_name" style="width: 100px;margin-right: 5px"></el-input>审批人:
+                                <el-input v-model="item.event_name" style="width: 100px;margin-right: 5px" :disabled="operateType == 'check'"></el-input>审批人:
                             </div>
                             <div class="col">
                                 <div class="select">
                                     <div class="input" :class="item.isCurrentNode ? 'selectBorder' : ''">
-                                        <div class="valueBox" v-for="(jItem,jIndex) in item.selectPerson" :key="jIndex">
-                                            <div class="value">{{ jItem.personName + '(' + jItem.dept + ')' }}</div>
-                                            <div class="icon" @click.stop="deleteSelectPerson(jItem,index,jIndex)">
+                                        <div class="valueBox" v-for="(jItem,jIndex) in item.user_list" :key="jIndex">
+                                            <div class="value">{{ jItem.personName + '(' + jItem.deptName + ')' }}</div>
+                                            <div class="icon" @click.stop="deleteSelectPerson(jItem,index,jIndex)" v-show="operateType !== 'check'">
                                                 <i class="el-icon-error"></i>
                                             </div>
                                         </div>
@@ -51,19 +59,19 @@
                                 <div class="tip">
                                     <div class="tip_info">节点设置:</div>
                                     <div class="value">
-                                        <el-radio-group v-model="item.node_set">
+                                        <el-radio-group v-model="item.node_set" :disabled="operateType == 'check'">
                                             <el-radio :label="1">任意人员同意即可</el-radio>
                                             <el-radio :label="2">必须人员全部同意</el-radio>
                                         </el-radio-group>
                                     </div>
                                 </div>
                             </div>
-                            <div class="icons col">
+                            <div class="icons col" v-show="operateType !== 'check'" >
                                 <i class="el-icon-remove icon" @click="deleteNode(item,index)"></i>
                             </div>
                         </div>
 
-                        <el-button type="primary" @click="addNode">增加节点</el-button>
+                        <el-button type="primary" @click="addNode" v-if="operateType !== 'check'">增加节点</el-button>
                     </div>
                     <div class="right" v-if="ShowRightTable">
                         <div class="right_content">
@@ -78,9 +86,8 @@
                                     :data="relatePersonList"
                                     style="width: 100%;margin-bottom: 20px;"
                                     row-key="id"
+                                    default-expand-all
                                     :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
-                                    ref="relateTable"
-                                    id="relateTable"
                                     >
                                     <el-table-column
                                     prop="deptName"
@@ -116,16 +123,16 @@
                         </div>
                     </div>
                 </div>
-                <div slot="footer" class="footer">
+                <div slot="footer" class="footer" v-if="operateType !== 'check'">
                     <el-button @click="cancel">取 消</el-button>
-                    <el-button type="primary" @click="createFlow">确 定</el-button>
+                    <el-button type="primary" @click="createFlow" :disabled="operateType == 'check'">确 定</el-button>
                 </div>
             </div>
         </el-dialog>
     </div>
 </template>
 <script>
-import { adminAuthCascaderApi, createFlowApi, flowListApi } from "@/request/api"
+import { adminAuthCascaderApi, createFlowApi, flowListApi, flowInfoApi, editFlowApi } from "@/request/api"
 export default{
     data(){
         return {
@@ -142,29 +149,75 @@ export default{
             total: 0,
             pageParam: {
                 page: 1,
-                pageSize: 20
-            }
+                pagesize: 2
+            },
+            operateType: "",
+            dialogTitle: "",
+            flowInfoObj: {},
+            currentId: ""
         }
     },
     // watch: {
     //     nodeList: {
     //         handler(newVal){
     //             //讲内容回显到右上搜索框
-    //             this.keyword = newVal[this.selectNodeIndex].selectPerson.map((item) => {
+    //             this.keyword = newVal[this.selectNodeIndex].user_list.map((item) => {
     //                 return `${item.personName}(${item.dept})`
     //             }).join("、")
     //         },
     //         deep: true
     //     }
     // },
+    created(){
+    },
+
     mounted(){
         this.getDataList();
         this.getAdminAuthCasList();
     },
     methods:{
-        openDialog(){
+        toCreateFlow(){
             this.dialogVisble = true;
+            this.operateType = "create";
+            this.dialogTitle = "创建审批流";
+            this.nodeList.forEach(item => {
+                item.user_list.forEach(i => {
+                    this.relatePersonList = this.addValue(this.relatePersonList, "children", "clearAll", i);
+                })
+            })
+            this.approvalName = "";
+            this.nodeList = [];
+            this.addNode();
         },
+        toCheck(row){
+            this.dialogVisble = true;
+            this.operateType = "check";
+            this.dialogTitle = "查看审批流";
+            this.nodeList.forEach(item => {
+                item.user_list.forEach(i => {
+                    this.relatePersonList = this.addValue(this.relatePersonList, "children", "clearAll", i);
+                })
+            })
+            this.$nextTick(() => {
+                this.getFlowInfo(row.flow_id);
+            })
+            
+        },
+        toEdit(row){
+            this.currentId = row.flow_id;
+            this.dialogVisble = true;
+            this.operateType = "edit";
+            this.dialogTitle = "编辑审批流";
+            this.nodeList.forEach(item => {
+                item.user_list.forEach(i => {
+                    this.relatePersonList = this.addValue(this.relatePersonList, "children", "clearAll", i);
+                })
+            })
+            this.$nextTick(() => {
+                this.getFlowInfo(row.flow_id);
+            })
+        },
+
         //获取列表
         getDataList(){
             flowListApi(this.pageParam).then(res => {
@@ -176,24 +229,47 @@ export default{
         },
         handleSizeChange(val){
             this.pageParam.page = 1;
-            this.pageParam.pageSize = val;
+            this.pageParam.pagesize = val;
             this.getDataList();
         },
         handleCurrentChange(val){
             this.pageParam.page = val;
             this.getDataList();
         },
-        
+        //获取详情
+        getFlowInfo(id){
+            flowInfoApi({flow_id: id}).then(res => {
+                if(res.code == 200){
+                    this.flowInfoObj = res.data;
+                    this.approvalName = this.flowInfoObj.flow_name;
+                    this.nodeList = this.flowInfoObj.data;
+                    this.nodeList = this.nodeList.map(item => {
+                        item.user_list.map(i => {
+                            i.personName = i.nickname;
+                            i.deptName = i.name;
+
+                            this.$nextTick(() => {
+                                this.relatePersonList = this.addValue(this.relatePersonList, "children", "showInfoSelect", i);
+                            })
+                            
+                            return i
+                        })
+                        return item;
+                    })
+                    this.$forceUpdate();
+                }
+            })
+        },
         //增加节点
         addNode(){
             let nodeObj = {
                 id: this.nodeList.length,
                 event_name: "",
-                selectPerson: [],
+                user_list: [],
                 node_set: 1,
                 isCurrentNode: false
             }
-            this.nodeList.push(nodeObj)
+            this.nodeList.push(nodeObj);
         },
         //删除节点
         deleteNode(item, index){
@@ -204,7 +280,7 @@ export default{
             }).then(() => {
                 let deleteArr = this.nodeList.splice(index, this.nodeList.length - index);
                 deleteArr.forEach(Ditem => {
-                    Ditem.selectPerson.forEach(Sitem => {
+                    Ditem.user_list.forEach(Sitem => {
                         this.addValue(this.relatePersonList, "children", "single", Sitem);
                     })
                 })
@@ -222,17 +298,18 @@ export default{
         },
         //关闭dialog
         cancel(){
-            this.dialogVisble = false
+            this.dialogVisble = false;
+            this.ShowRightTable = false;
         },
         //选择审批人
         toSelectTableNode(val){
             if(val.select){
-                this.nodeList[this.selectNodeIndex].selectPerson.push(val);
+                this.nodeList[this.selectNodeIndex].user_list.push(val);
             }
         },
         //删除已选审批人
         deleteSelectPerson(jItem,index,jIndex){
-            this.nodeList[index].selectPerson.splice(jIndex, 1);
+            this.nodeList[index].user_list.splice(jIndex, 1);
             this.addValue(this.relatePersonList, "children", "single", jItem);
         },
         //操作数据树
@@ -246,10 +323,13 @@ export default{
                     }
                     // 如果元素等于 value，则在数组中添加新值
                     if (obj[i].type === value) {
-                        if(type == "clearAll"){
-                            if(obj[i].select){
-                                // obj[i].select = false;
+                        if(type == "showInfoSelect"){
+                            if(itemVal.id == obj[i].id){
+                                obj[i].select = true;
                             }
+                        }
+                        if(type == "clearAll"){
+                            obj[i].select = false;
                         }
                         if(type == "single"){
                             if(obj[i].select && itemVal.id == obj[i].id){
@@ -277,8 +357,7 @@ export default{
         },
         //显示右边表格进行选择
         clickNodeInput(valIndex){
-            //将已选择的清空
-            this.relatePersonList = this.addValue(this.relatePersonList, "children", "clearAll");
+            if(this.operateType == "check") return;
             this.ShowRightTable = true;
             this.selectNodeIndex = valIndex;
 
@@ -306,7 +385,7 @@ export default{
                     node_set: item.node_set,
                     ids: ""
                 }
-                obj.ids = item.selectPerson.map(i => {
+                obj.ids = item.user_list.map(i => {
                     return i.id
                 }).join(",");
                 dataParam.push(obj);
@@ -315,11 +394,26 @@ export default{
                 flow_name: this.approvalName,
                 data: JSON.stringify(dataParam)
             }
-            createFlowApi(params).then(res => {
-                if(res.code == 200 ){
-                    this.$message.success("创建成功")
-                }
-            })
+            if(this.operateType == "edit"){
+                params.flow_id = this.currentId;
+                editFlowApi(params).then(res => {
+                    if(res.code == 200 ){
+                        this.$message.success("修改成功");
+                        this.dialogVisble = false;
+                        this.ShowRightTable = false;
+                        this.getDataList();
+                    }
+                })
+            }else{
+                createFlowApi(params).then(res => {
+                    if(res.code == 200 ){
+                        this.$message.success("创建成功");
+                        this.dialogVisble = false;
+                        this.ShowRightTable = false;
+                        this.getDataList();
+                    }
+                })
+            }
         }
 
     }
@@ -334,6 +428,10 @@ export default{
     }
     :deep(.el-dialog__header){
         border: 1px solid #eee;
+    }
+    :deep(.el-pagination){
+        text-align: right;
+        margin-top: 10px;
     }
     .dialog{
         .content{
@@ -392,6 +490,12 @@ export default{
                             }
                             .selectBorder{
                                 border: 1px solid #409EFF;
+                            }
+                            .disabled{
+                                background-color: #F5F7FA;
+                                border-color: #E4E7ED;
+                                color: #C0C4CC;
+                                cursor: not-allowed;
                             }
                             .tip{
                                 display: flex;
