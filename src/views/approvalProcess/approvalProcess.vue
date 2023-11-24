@@ -24,7 +24,7 @@
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
             :current-page="pageParam.page"
-            :page-sizes="[1, 2, 3, 4]"
+            :page-sizes="[10, 20, 30, 40]"
             :page-size="pageParam.pagesize"
             layout="total, sizes, prev, pager, next, jumper"
             :total="total">
@@ -149,7 +149,7 @@ export default{
             total: 0,
             pageParam: {
                 page: 1,
-                pagesize: 2
+                pagesize: 20
             },
             operateType: "",
             dialogTitle: "",
