@@ -1,7 +1,6 @@
 import axios from "axios"; // 引入axios
 import { domainName } from "@/config/index";
 import { Message } from "element-ui";
-import Router from "@/router/index"
 // 创建 instance实例
 const instance = axios.create({
     // baseURL: process.env.VUE_APP_BASE_URL,
@@ -11,7 +10,8 @@ const instance = axios.create({
 // 请求拦截器
 instance.interceptors.request.use(
     (config) => {
-        let token = "93382208-30b0-4293-9197-6c53a0b4b17a";
+        let token = localStorage.getItem("token");
+       
         if (token) {
             config.headers["token"] = token;
         }
@@ -30,19 +30,19 @@ instance.interceptors.response.use(
             Message.error(data.msg || "网络请求错误");
         }
         if (data.code == 401) {
-            Router.push('/login')
+            Message.error(data.msg || "请重新登录");
         }
         return data; // 这个返回的组件中then方法中的数据
     },
     (err) => {
         let data = err.response.data;
         if (data.code != 200) {
-            // Message.error(data.msg || "网络请求错误");
+            Message.error(data.msg || "网络请求错误");
         }
         if (data.code == 401) {
-            Router.push('/login')
+            Message.error(data.msg || "请重新登录");
         }
-        // return Promise.reject(err);
+        return Promise.reject(err);
     }
 );
 export default instance;

@@ -170,6 +170,16 @@ export default{
     //     }
     // },
     created(){
+        let path = this.$route.path;
+        if(path){
+            if(path.indexOf("token") != -1){
+                let token = path.substr(path.indexOf("=") + 1,path.length);
+                if(token){
+                    localStorage.setItem("token", token);
+                }
+            }
+        }
+
     },
 
     mounted(){

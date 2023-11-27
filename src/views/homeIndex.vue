@@ -53,7 +53,8 @@ export default {
   },
   methods: {
     menuClick(item) {
-      this.$router.push(item.url).catch(err =>{console.log(err)});
+      this.$router.push(
+        item.url).catch(err =>{console.log(err)});
     },
     breadcrumbClick(item, index) {
       if (index != 0) {
