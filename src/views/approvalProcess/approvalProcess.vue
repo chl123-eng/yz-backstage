@@ -37,17 +37,18 @@
                         <div class="row">
                             <div class="col info">审批流名称:</div>
                             <div class="col">
-                                <el-input placeholder="请输入" v-model="approvalName" style="width: 360px" :disabled="operateType == 'check'">
+                                <el-input placeholder="请输入" v-model="approvalName" :class="!approvalName ? 'require' : ''" style="width: 360px" :disabled="operateType == 'check'">
                                 </el-input>
+                                <!-- <div class="require" v-if="!approvalName">请输入审批流名称</div> -->
                             </div>
                         </div>
                         <div class="row" v-for="(item, index) in nodeList" :key="index" @click="clickNodeInput(index)">
                             <div class="col info">
-                                <el-input v-model="item.event_name" style="width: 100px;margin-right: 5px" :disabled="operateType == 'check'"></el-input>审批人:
+                                <el-input v-model="item.event_name" :class="!item.event_name ? 'require' : ''" style="width: 100px;margin-right: 5px" :disabled="operateType == 'check'"></el-input>审批人:
                             </div>
                             <div class="col">
                                 <div class="select">
-                                    <div class="input" :class="item.isCurrentNode ? 'selectBorder' : ''">
+                                    <div class="input" :class="{'selectBorder': item.isCurrentNode, 'require': item.user_list.length == 0}">
                                         <div class="valueBox" v-for="(jItem,jIndex) in item.user_list" :key="jIndex">
                                             <div class="value">{{ jItem.personName + '(' + jItem.deptName + ')' }}</div>
                                             <div class="icon" @click.stop="deleteSelectPerson(jItem,index,jIndex)" v-show="operateType !== 'check'">
@@ -281,7 +282,9 @@ export default{
                 let deleteArr = this.nodeList.splice(index, this.nodeList.length - index);
                 deleteArr.forEach(Ditem => {
                     Ditem.user_list.forEach(Sitem => {
-                        this.addValue(this.relatePersonList, "children", "single", Sitem);
+                        this.$nextTick(() => {
+                            this.relatePersonList = this.addValue(this.relatePersonList, "children", "single", Sitem);
+                        })
                     })
                 })
                 this.nodeList = this.nodeList.slice(0, index);
@@ -305,12 +308,17 @@ export default{
         toSelectTableNode(val){
             if(val.select){
                 this.nodeList[this.selectNodeIndex].user_list.push(val);
+                this.$nextTick(() => {
+                    this.relatePersonList = this.addValue(this.relatePersonList, "children", "showInfoSelect", val);
+                })
             }
         },
         //删除已选审批人
         deleteSelectPerson(jItem,index,jIndex){
             this.nodeList[index].user_list.splice(jIndex, 1);
-            this.addValue(this.relatePersonList, "children", "single", jItem);
+            this.$nextTick(() => {
+                this.relatePersonList = this.addValue(this.relatePersonList, "children", "single", jItem);
+            })
         },
         //操作数据树
         addValue(obj, value, type, itemVal) {
@@ -376,8 +384,43 @@ export default{
                 this.relatePersonList = res.data;
             })
         },
+        //校验
+        validate(){
+            let flag = true;
+            if(!this.approvalName){
+                flag = false;
+            }
+
+            
+            this.nodeList.forEach(item => {
+                if(!item.event_name){
+                    flag = false;
+                }
+                if(item.user_list.length == 0){
+                    flag = false;
+                }
+            })
+
+
+            return flag
+        },
         //创建审批流
         createFlow(){
+            let flag = this.validate();
+            if(!flag) {
+                this.$message({
+                    message: '请将信息填写完整',
+                    type: 'warning'
+                })
+                return 
+            }
+            if(this.nodeList.length == 0){
+                this.$message({
+                    message: '请添加审批人',
+                    type: 'warning'
+                })
+                return 
+            }
             let dataParam = [];
             this.nodeList.forEach(item => {
                 let obj = {
@@ -435,23 +478,31 @@ export default{
     }
     .dialog{
         .content{
+            padding-left: 20px;
             .top{
                 display: flex;
                 .left{
                     text-align: center;
+                    .row::before{
+                        content: "*";
+                        color: red;
+                    }
                     .row{
                         display: flex;
                         margin-bottom: 30px;
+                        
 
                         .info{
-                            width: 210px;
-                            text-align: right;
+                            width: 155px;
+                            text-align: left;
                             margin-right: 10px;
                             line-height: 40px;
                             font-size: 15px;
                             font-weight: 600;
+                            padding-left: 5px;
                         }
                         .col{
+                            text-align: left;
                             .input{
                                 width: 360px;
                                 min-height: 40px;
@@ -486,6 +537,15 @@ export default{
                                             color: #409EFF;
                                         }
                                     }
+                                }
+                            }
+                            .require{
+                                // color:red;
+                                // margin-top: 5px;
+                                // font-size: 13px;
+                                border-color: red;
+                                :deep(.el-input__inner){
+                                    border-color: red;
                                 }
                             }
                             .selectBorder{
